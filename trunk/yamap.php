@@ -33,11 +33,12 @@ function tutsplus_the_content( $content ) {
  *
  * Attributes parameter may contain:
  * <pre>
- * * icon  => (string) Icon type
- * * name  => (string) Name of the place
- * * color => (string) Icon color
- * * url   => (string) URL to be opened (if given)
- * * coord => (string) Geo coordinates (longitude, latitude)
+ * * icon    => (string) Icon type
+ * * name    => (string) Name of the place
+ * * color   => (string) Icon color
+ * * url     => (string) URL to be opened (if given)
+ * * coord   => (string) Geo coordinates (longitude, latitude)
+ * * balloon => (string) Balloon content (if given)
  * </pre>
  *
  * @see https://tech.yandex.ru/maps/doc/jsapi/2.1/ref/reference/option.presetStorage-docpage/ Icons types
@@ -48,32 +49,41 @@ function yaplacemark_func($atts) {
     global $yaplacemark_count;
 
 	$atts = shortcode_atts(array(
-		'coord' => '',
-		'name'  => '',
-		'color' => 'blue',
-		'url'   => '',
-		'icon'  => 'islands#dotIcon',
+		'coord'   => '',
+		'name'    => '',
+		'color'   => 'blue',
+		'url'     => '',
+		'icon'    => 'islands#dotIcon',
+		'balloon' => '',
 	), $atts);
 	$yaplacemark_count++;
-	$yaicon = trim($atts['icon']);
+
+	$attr_icon = trim($atts['icon']);
+	$attr_name = htmlspecialchars($atts['name']);
 
 	if (
-		($yaicon === 'islands#blueStretchyIcon')
-		|| ($yaicon === 'islands#blueIcon')
-		|| ($yaicon === 'islands#blueCircleIcon')
+		($attr_icon === 'islands#blueStretchyIcon')
+		|| ($attr_icon === 'islands#blueIcon')
+		|| ($attr_icon === 'islands#blueCircleIcon')
 	) {
-		$yahint = '';
-		$yacontent = $atts['name'];
+		$ya_hint_content = '';
+		$ya_icon_content = $attr_name;
 	}
 	else {
-		$yahint = $atts['name'];
-		$yacontent = '';
+		$ya_hint_content = $attr_name;
+		$ya_icon_content = '';
+	}
+
+	$balloon_code = '';
+	if (!empty($atts['balloon'])) {
+		$balloon_code = 'balloonContent: "' . htmlspecialchars($atts['balloon']) . '",';
 	}
 
 	$yaplacemark = '
 		placemark' . $yaplacemark_count . ' = new ymaps.Placemark([' . $atts['coord'] . '], {
-                                hintContent: "' . $yahint . '",
-                                iconContent: "' . $yacontent . '",
+                                hintContent: "' . $ya_hint_content . '",
+                                iconContent: "' . $ya_icon_content . '",
+                                ' . $balloon_code . '
                             }, {
                             	preset: "' . $atts['icon'] . '",
                             	//https://tech.yandex.ru/maps/doc/jsapi/2.1/ref/reference/option.presetStorage-docpage/
@@ -126,7 +136,7 @@ function yamap_func($atts, $content){
 		$yamap = '';
 	}
 
-	$placemarkscode = str_replace('&nbsp;', '', strip_tags($content));
+	$placemarks_code = str_replace('&nbsp;', '', strip_tags($content));
 
     $yamap .= '
 
@@ -142,13 +152,13 @@ function yamap_func($atts, $content){
                                 });   
 
 							'
-		. do_shortcode($placemarkscode);
+		. do_shortcode($placemarks_code);
 
 		for ($i = 1; $i <= $yaplacemark_count; $i++) {
 			if ($i > 1) {
 				$placearr .= '.';
 			}
-			$placearr .= 'add(placemark'.$i.')';
+			$placearr .= 'add(placemark' . $i . ')';
 		}
 		$yamap .= 'myMap'.$maps_count . '.geoObjects.' . $placearr . ';';
 		if ($atts["scrollzoom"] == "0") {
