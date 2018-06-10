@@ -25,7 +25,7 @@ function tutsplus_the_content( $content ) {
 	global $count_content;
 	$count_content++;
 
-    return $content;
+	return $content;
 }
 
 /**
@@ -76,7 +76,7 @@ function yaplacemark_func($atts) {
 
 	$balloon_code = '';
 	if (!empty($atts['balloon'])) {
-		$balloon_code = 'balloonContent: "' . $atts['balloon'] . '",';
+		$balloon_code = 'balloonContent: "' . str_replace(["\r", "\n"], '', nl2br($atts['balloon'])) . '",';
 	}
 
 	$yaplacemark = '
