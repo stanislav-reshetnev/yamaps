@@ -76,7 +76,7 @@ function yaplacemark_func($atts) {
 
 	$balloon_code = '';
 	if (!empty($atts['balloon'])) {
-		$balloon_code = 'balloonContent: "' . htmlspecialchars($atts['balloon']) . '",';
+		$balloon_code = 'balloonContent: "' . $atts['balloon'] . '",';
 	}
 
 	$yaplacemark = '
