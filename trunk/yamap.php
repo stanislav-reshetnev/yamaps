@@ -59,7 +59,7 @@ function yaplacemark_func($atts) {
 	$yaplacemark_count++;
 
 	$attr_icon = trim($atts['icon']);
-	$attr_name = htmlspecialchars($atts['name']);
+	$attr_name = $atts['name'];
 
 	if (
 		($attr_icon === 'islands#blueStretchyIcon')
