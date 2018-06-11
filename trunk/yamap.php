@@ -36,30 +36,25 @@ function tutsplus_the_content( $content ) {
  * * icon    => (string) Icon type
  * * name    => (string) Name of the place
  * * color   => (string) Icon color
- * * url     => (string) URL to be opened (if given)
  * * coord   => (string) Geo coordinates (longitude, latitude)
  * * balloon => (string) Balloon content (if given)
  * </pre>
  *
  * @see https://tech.yandex.ru/maps/doc/jsapi/2.1/ref/reference/option.presetStorage-docpage/ Icons types
- * @param array $atts Attributes
+ * @param array $attributes Attributes
  * @return string
  */
-function yaplacemark_func($atts) {
-    global $yaplacemark_count;
-
-	$atts = shortcode_atts(array(
+function yaplacemark_func($attributes) {
+	$attributes = shortcode_atts(array(
 		'coord'   => '',
 		'name'    => '',
 		'color'   => 'blue',
-		'url'     => '',
 		'icon'    => 'islands#dotIcon',
 		'balloon' => '',
-	), $atts);
-	$yaplacemark_count++;
+	), $attributes);
 
-	$attr_icon = trim($atts['icon']);
-	$attr_name = $atts['name'];
+	$attr_icon = trim($attributes['icon']);
+	$attr_name = $attributes['name'];
 
 	if (
 		($attr_icon === 'islands#blueStretchyIcon')
@@ -75,111 +70,98 @@ function yaplacemark_func($atts) {
 	}
 
 	$balloon_code = '';
-	if (!empty($atts['balloon'])) {
-		$balloon_code = 'balloonContent: "' . str_replace(["\r", "\n"], '', nl2br($atts['balloon'])) . '",';
+	if (!empty($attributes['balloon'])) {
+		$balloon_code = 'balloonContent: "' . str_replace(["\n", "\r"], '', $attributes['balloon']) . '",';
 	}
 
-	$yaplacemark = '
-		placemark' . $yaplacemark_count . ' = new ymaps.Placemark([' . $atts['coord'] . '], {
-                                hintContent: "' . $ya_hint_content . '",
-                                iconContent: "' . $ya_icon_content . '",
-                                ' . $balloon_code . '
-                            }, {
-                            	preset: "' . $atts['icon'] . '",
-                            	//https://tech.yandex.ru/maps/doc/jsapi/2.1/ref/reference/option.presetStorage-docpage/
-                            	iconColor: "' . $atts['color'] . '"
-                            });  
-	';
-
-	if (!empty(trim($atts['url']))) {
-		$yaplacemark .= ' 
-			placemark' . $yaplacemark_count . '.events.add("click", function () {
-                location.href="' . $atts['url'].'";
-            });
-		';
-	}
+  $yaplacemark = sprintf(
+  	'yamaps_geo_coll.add(new ymaps.Placemark('
+			. '[%1$s], '
+			. '{ hintContent: "%2$s", iconContent: "%3$s", %4$s }, '
+			. '{ preset: "%5$s", iconColor: "%6$s" }));',
+		$attributes['coord'],	/* #1 */
+		$ya_hint_content,			/* #2 */
+    $ya_icon_content,			/* #3 */
+    $balloon_code,				/* #4 */
+    $attributes['icon'],	/* #5 */
+    $attributes['color']	/* #6 */
+  );
 
 	return $yaplacemark;
 }
 
-function yamap_func($atts, $content){
-    global $yaplacemark_count;
-    global $yacontrol_count;
-    global $maps_count;
-    global $count_content;
+function yamap_func($attributes, $content){
+	global $yacontrol_count;
+	global $maps_count;
+	global $count_content;
 
-	$placearr = '';
-	$atts = shortcode_atts(array(
+	$attributes = shortcode_atts(array(
 		'center'     => '55.7532,37.6225',
 		'zoom'       => '12',
 		'type'       => 'map',
 		'height'     => '20rem',
 		'controls'   => '',
 		'scrollzoom' => '1',
-
-	), $atts);
-	$yaplacemark_count = 0;
+		'auto_zoom'  => '0',
+	), $attributes);
 	$yacontrol_count = 0;
 
-	$yamactrl = str_replace(';', '", "', $atts["controls"]);
+	$yamap_controls = str_replace(';', '", "', $attributes['controls']);
 
-	if (!empty(trim($yamactrl))) {
-		$yamactrl = '"' . $yamactrl . '"';
+	if (!empty(trim($yamap_controls))) {
+		$yamap_controls = '"' . $yamap_controls . '"';
 	}
 
-	if ($maps_count == 0) { // Test for first time content and single map
-		$yamap =
-			'<script src="https://api-maps.yandex.ru/2.1/?lang=' . get_locale() . '" type="text/javascript"></script>'
-			. "\n";
-	}
-	else {
-		$yamap = '';
+  $yamap_code = '';
+	if (!$maps_count) { // Test for first time content and single map
+		$yamap_code =
+			'<script src="https://api-maps.yandex.ru/2.1/?lang=' . get_locale() . '" type="text/javascript"></script>' . "\n";
 	}
 
-	$placemarks_code = str_replace('&nbsp;', '', strip_tags($content));
-
-    $yamap .= '
-
+	$yamap_code .=
+		sprintf(
+			'
 						<script type="text/javascript">
                         ymaps.ready(init);
                  
                         function init () {
-                            var myMap' . $maps_count . ' = new ymaps.Map("yamap' . $maps_count . '", {
-                                    center: [' . $atts["center"] . '],
-                                    zoom: ' . $atts["zoom"] . ',
-                                    type: "' . $atts["type"] . '",
-                                    controls: [' . $yamactrl . '] 
-                                });   
-
-							'
-		. do_shortcode($placemarks_code);
-
-		for ($i = 1; $i <= $yaplacemark_count; $i++) {
-			if ($i > 1) {
-				$placearr .= '.';
-			}
-			$placearr .= 'add(placemark' . $i . ')';
-		}
-		$yamap .= 'myMap'.$maps_count . '.geoObjects.' . $placearr . ';';
-		if ($atts["scrollzoom"] == "0") {
-			$yamap .= "myMap".$maps_count . ".behaviors.disable('scrollZoom');";
-		}
-
-        $yamap .= '
+                            var myMap%3$d = new ymaps.Map("yamap%3$d", {
+                                   center: [%4$s],
+                                    zoom: %5$s,
+                                    type: "%6$s",
+                                    controls: [%7$s] 
+                            });
+                            var yamaps_geo_coll = new ymaps.GeoObjectCollection({});
+                             
+                            %1$s
+                            %2$s
+                             
+                            myMap%3$d.geoObjects.add(yamaps_geo_coll);
+                            %9$s
                         }
-					</script>
-					<div
-						class="mist"
-						id="yamap' . $maps_count . '" 
-						style="position: relative; min-height: ' . $atts["height"] . '; margin-bottom: 1rem;"> 	
-					</div>
-				  ';
+            </script>
+					  <div
+						  class="mist"
+						  id="yamap%3$d" 
+						  style="position: relative; min-height: %8$s; margin-bottom: 1rem;"> 	
+					  </div>
+			',
+      do_shortcode(str_replace('&nbsp;', '', $content)),	/* #1 */
+			empty($attributes['scrollzoom']) ? 'myMap' . $maps_count . ".behaviors.disable('scrollZoom');" : '',	/* #2 */
+			$maps_count,	/* #3 */
+			$attributes['center'],	/* #4 */
+      $attributes['zoom'],	/* #5 */
+      $attributes['type'],	/* #6 */
+      $yamap_controls,	/* #7 */
+      $attributes['height'],	/* #8 */
+			empty($attributes['auto_zoom']) ? '' : 'myMap' . $maps_count . '.setBounds(yamaps_geo_coll.getBounds());' /* #9 */
+		);
 
-    if ($count_content >= 1) {
-    	$maps_count++;
-    }
+	if ($count_content >= 1) {
+		$maps_count++;
+	}
 
-    return $yamap;
+	return $yamap_code;
 }
 
 add_shortcode('yaplacemark', 'yaplacemark_func');
@@ -191,13 +173,15 @@ function yamaps_plugin_load_plugin_textdomain() {
 }
 add_action('plugins_loaded', 'yamaps_plugin_load_plugin_textdomain');
 
-
-// Add map button
-
+/**
+ * Add map button.
+ *
+ * @param array $plugin_array Current plugins
+ * @return array
+ */
 function yamap_plugin_scripts($plugin_array)
 {
-    // Plugin localization
-
+	// Plugin localization
 	wp_register_script('yamap_plugin', plugin_dir_url(__FILE__) . 'js/localization.js');
 	wp_enqueue_script('yamap_plugin');
 
@@ -230,11 +214,10 @@ function yamap_plugin_scripts($plugin_array)
 
 	wp_localize_script('yamap_plugin', 'yamap_object', $lang_array);
 
-	//enqueue TinyMCE plugin script with its ID.
-
+	// Enqueue TinyMCE plugin script with its ID.
 	$plugin_array["yamap_plugin"] = plugin_dir_url(__FILE__) . "js/btn.js";
 
-    return $plugin_array;
+	return $plugin_array;
 }
 
 
@@ -249,4 +232,3 @@ function register_buttons_editor($buttons)
 }
 
 add_filter("mce_buttons", "register_buttons_editor");
-?>
